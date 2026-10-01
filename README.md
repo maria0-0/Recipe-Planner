@@ -2,13 +2,18 @@
 
 *The FCPL lab runs as **SharpQuest**, the quest to learn C#. That's why the tooling and some code say SharpQuest.*
 
-> **Edit this section in session 1.** It's your first commit.
->
-> **Theme:** _which of the catalogue themes you picked_
-> **In one sentence:** _what your app will do by January_
-> **Route:** _guided or project_
->
-> Don't write your name or your avatar here. The scoreboard is anonymous, and this file is how people would find out.
+Recipe Book & Meal Planner
+
+Recipes, a week of meals, and the shopping list that writes itself.
+
+You build a recipe book that plans: recipes with their ingredients, a week of meals chosen from them, and a shopping list added up for you. Then the questions: "what can I cook with what's in the fridge?", "how much pasta do I need for this week?", "which recipes are under 30 minutes and vegetarian?"
+
+    Your items: recipes — name, category, cuisine, time, servings, ingredients with quantities
+    Where the data comes from: TheMealDB (free, with a public test key) — or your own family recipes
+    Something happens when: a recipe is added, or the plan changes the shopping list
+    Parent and children: a Category has many recipes
+    What you'll look at: the recipe book, searchable, and the week's plan
+
 
 ---
 

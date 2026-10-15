@@ -99,6 +99,51 @@ public class RecipeTests
         Assert.Throws<ArgumentOutOfRangeException>(() => recipe.Scale(invalidServings));
     }
 
+    [Fact]
+    public void Shopping_list_combines_quantities_of_same_ingredient_and_unit()
+    {
+        var plan = new MealPlan();
+        var recipe1 = new Recipe("rec-1", "Lunch", ingredients: [new("Pasta", 200m, Unit.Gram)]);
+        var recipe2 = new Recipe("rec-2", "Dinner", ingredients: [new("Pasta", 300m, Unit.Gram)]);
+
+        plan.AddRecipe(recipe1);
+        plan.AddRecipe(recipe2);
+
+        var list = plan.GenerateShoppingList();
+
+        Assert.Single(list);
+        Assert.Equal(500m, list[0].Quantity);
+        Assert.Equal(Unit.Gram, list[0].Unit);
+    }
+
+    [Fact]
+    public void Shopping_list_keeps_different_units_of_same_ingredient_separate()
+    {
+        var plan = new MealPlan();
+        var recipe1 = new Recipe("rec-1", "Bread", ingredients: [new("Flour", 200m, Unit.Gram)]);
+        var recipe2 = new Recipe("rec-2", "Pancakes", ingredients: [new("Flour", 1m, Unit.Cup)]);
+
+        plan.AddRecipe(recipe1);
+        plan.AddRecipe(recipe2);
+
+        var list = plan.GenerateShoppingList();
+
+        Assert.Equal(2, list.Count);
+        Assert.Contains(list, i => i.Unit == Unit.Gram && i.Quantity == 200m);
+        Assert.Contains(list, i => i.Unit == Unit.Cup && i.Quantity == 1m);
+    }
+
+    [Fact]
+    public void Empty_meal_plan_generates_empty_shopping_list()
+    {
+        var plan = new MealPlan();
+
+        var list = plan.GenerateShoppingList();
+
+        Assert.Empty(list);
+    }
+
+
 }
 
 

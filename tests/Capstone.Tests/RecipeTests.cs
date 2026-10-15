@@ -74,6 +74,31 @@ public class RecipeTests
     {
         Assert.Throws<ArgumentException>(() => new Category("   "));
     }
+
+    [Fact]
+    public void Scaling_recipe_multiplies_ingredient_quantities_by_factor()
+    {
+        var ingredients = new List<IngredientLine>
+        {
+            new("Pasta", 200m, Unit.Gram)
+        };
+        var recipe = new Recipe("rec-1", "Pasta", servings: 4, ingredients: ingredients);
+
+        var scaled = recipe.Scale(6);
+
+        Assert.Equal(6, scaled.Servings);
+        Assert.Equal(300m, scaled.Ingredients[0].Quantity);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Scaling_to_zero_or_negative_servings_throws(int invalidServings)
+    {
+        var recipe = new Recipe("rec-1", "Pasta", servings: 4);
+        Assert.Throws<ArgumentOutOfRangeException>(() => recipe.Scale(invalidServings));
+    }
+
 }
 
 

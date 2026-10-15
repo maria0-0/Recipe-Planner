@@ -39,4 +39,27 @@ public class Recipe : IRecipe
         Steps = steps ?? [];
         Rating = rating;
     }
+
+
+    public Recipe Scale(int targetServings)
+    {
+        if (targetServings <= 0)
+            throw new ArgumentOutOfRangeException(nameof(targetServings), "Target servings must be positive.");
+
+        decimal factor = (decimal)targetServings / Servings;
+        var scaledIngredients = Ingredients
+            .Select(i => new IngredientLine(i.Name, i.Quantity * factor, i.Unit))
+            .ToList();
+
+        return new Recipe(
+            Id,
+            DisplayName,
+            Cuisine,
+            TotalTimeMinutes,
+            targetServings,
+            scaledIngredients,
+            Steps,
+            Rating);
+    }
+
 }

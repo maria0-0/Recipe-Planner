@@ -44,4 +44,5 @@ public class RecipeStore : IItemStore
         _items.RemoveAt(index);
         return true;
     }
+
 }

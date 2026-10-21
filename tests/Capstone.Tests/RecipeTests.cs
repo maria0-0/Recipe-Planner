@@ -12,19 +12,19 @@ public class RecipeTests
     [InlineData("   ")]
     public void Recipe_with_empty_or_whitespace_id_throws_ArgumentException(string? invalidId)
     {
-        Assert.Throws<ArgumentException>(() => new Recipe(invalidId!, "Pancakes"));
+        Assert.Throws<ArgumentException>(() => new StovetopRecipe(invalidId!, "Pancakes"));
     }
 
     [Fact]
     public void Recipe_with_empty_name_throws_ArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => new Recipe("rec-1", "   "));
+        Assert.Throws<ArgumentException>(() => new StovetopRecipe("rec-1", "   "));
     }
 
     [Fact]
     public void Recipe_sets_default_values_when_optional_parameters_omitted()
     {
-        var recipe = new Recipe("rec-10", "Classic Carbonara");
+        var recipe = new StovetopRecipe("rec-10", "Classic Carbonara");
 
         Assert.Equal("General", recipe.Cuisine);
         Assert.Equal(30, recipe.TotalTimeMinutes);
@@ -37,7 +37,7 @@ public class RecipeTests
     public void Category_can_add_recipes()
     {
         var category = new Category("Italian");
-        var recipe = new Recipe("rec-1", "Margherita Pizza");
+        var recipe = new StovetopRecipe("rec-1", "Margherita Pizza");
 
         category.AddRecipe(recipe);
 
@@ -49,9 +49,9 @@ public class RecipeTests
     public void Adding_duplicate_recipe_id_to_store_throws_and_does_not_modify_count()
     {
         var store = new RecipeStore();
-        store.Add(new Recipe("rec-1", "Risotto"));
+        store.Add(new StovetopRecipe("rec-1", "Risotto"));
 
-        Assert.Throws<ArgumentException>(() => store.Add(new Recipe("rec-1", "Another Risotto")));
+        Assert.Throws<ArgumentException>(() => store.Add(new StovetopRecipe("rec-1", "Another Risotto")));
         Assert.Equal(1, store.Count);
     }
 
@@ -59,7 +59,7 @@ public class RecipeTests
     public void Removing_recipe_from_store_returns_true_and_decreases_count()
     {
         var store = new RecipeStore();
-        var recipe = new Recipe("rec-1", "Lasagna");
+        var recipe = new StovetopRecipe("rec-1", "Lasagna");
         store.Add(recipe);
 
         var removed = store.Remove("rec-1");
@@ -82,7 +82,7 @@ public class RecipeTests
         {
             new("Pasta", 200m, Unit.Gram)
         };
-        var recipe = new Recipe("rec-1", "Pasta", servings: 4, ingredients: ingredients);
+        var recipe = new StovetopRecipe("rec-1", "Pasta", servings: 4, ingredients: ingredients);
 
         var scaled = recipe.Scale(6);
 
@@ -95,7 +95,7 @@ public class RecipeTests
     [InlineData(-1)]
     public void Scaling_to_zero_or_negative_servings_throws(int invalidServings)
     {
-        var recipe = new Recipe("rec-1", "Pasta", servings: 4);
+        var recipe = new StovetopRecipe("rec-1", "Pasta", servings: 4);
         Assert.Throws<ArgumentOutOfRangeException>(() => recipe.Scale(invalidServings));
     }
 
@@ -103,8 +103,8 @@ public class RecipeTests
     public void Shopping_list_combines_quantities_of_same_ingredient_and_unit()
     {
         var plan = new MealPlan();
-        var recipe1 = new Recipe("rec-1", "Lunch", ingredients: [new("Pasta", 200m, Unit.Gram)]);
-        var recipe2 = new Recipe("rec-2", "Dinner", ingredients: [new("Pasta", 300m, Unit.Gram)]);
+        var recipe1 = new StovetopRecipe("rec-1", "Lunch", ingredients: [new("Pasta", 200m, Unit.Gram)]);
+        var recipe2 = new StovetopRecipe("rec-2", "Dinner", ingredients: [new("Pasta", 300m, Unit.Gram)]);
 
         plan.AddRecipe(recipe1);
         plan.AddRecipe(recipe2);
@@ -120,8 +120,8 @@ public class RecipeTests
     public void Shopping_list_keeps_different_units_of_same_ingredient_separate()
     {
         var plan = new MealPlan();
-        var recipe1 = new Recipe("rec-1", "Bread", ingredients: [new("Flour", 200m, Unit.Gram)]);
-        var recipe2 = new Recipe("rec-2", "Pancakes", ingredients: [new("Flour", 1m, Unit.Cup)]);
+        var recipe1 = new StovetopRecipe("rec-1", "Bread", ingredients: [new("Flour", 200m, Unit.Gram)]);
+        var recipe2 = new StovetopRecipe("rec-2", "Pancakes", ingredients: [new("Flour", 1m, Unit.Cup)]);
 
         plan.AddRecipe(recipe1);
         plan.AddRecipe(recipe2);

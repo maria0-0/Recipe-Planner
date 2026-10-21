@@ -61,15 +61,17 @@ public class RecipeMapper : IItemMapper
             if (string.IsNullOrWhiteSpace(dto.Id) || string.IsNullOrWhiteSpace(dto.DisplayName))
                 return null;
 
-            return new Recipe(
+        return new StovetopRecipe(
                 dto.Id,
                 dto.DisplayName,
-                dto.Cuisine ?? "General",
-                dto.TotalTimeMinutes,
-                dto.Servings,
-                dto.Ingredients,
-                dto.Steps,
-                dto.Rating);
+                heatLevel: "Medium",
+                cuisine: dto.Cuisine ?? "General",
+                totalTimeMinutes: dto.TotalTimeMinutes,
+                servings: dto.Servings,
+                ingredients: dto.Ingredients,
+                steps: dto.Steps,
+                rating: dto.Rating);
+
         }
         catch (Exception)
         {

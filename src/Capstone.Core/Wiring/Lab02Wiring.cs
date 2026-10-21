@@ -13,5 +13,5 @@ public sealed class Lab02Wiring : ILab02Wiring
     public IItemMapper CreateMapper() => new RecipeMapper();
 
     public IItem CreateSample(int seed) =>
-        new Recipe($"recipe-{seed}", $"Recipe Number {seed}");
+        new StovetopRecipe($"recipe-{seed}", $"Recipe Number {seed}");
 }

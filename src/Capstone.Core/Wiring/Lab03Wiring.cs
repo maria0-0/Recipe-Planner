@@ -8,7 +8,7 @@ public sealed class Lab03Wiring : ILab03Wiring
     public IItemStore CreateStore() => new RecipeStore();
 
     public IItem CreateSample(int seed) =>
-        new Recipe($"recipe-{seed}", $"Recipe Number {seed}");
+        new StovetopRecipe($"recipe-{seed}", $"Recipe Number {seed}");
 
     public IReadOnlyList<IItem> Search(IItemStore store, string query)
     {

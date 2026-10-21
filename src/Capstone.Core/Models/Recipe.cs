@@ -3,7 +3,7 @@ namespace Capstone.Core.Models;
 /// <summary>
 /// A recipe representing an item in the meal planner.
 /// </summary>
-public class Recipe : IRecipe
+public abstract class Recipe : IRecipe
 {
     public string Id { get; }
     public string DisplayName { get; }
@@ -14,7 +14,7 @@ public class Recipe : IRecipe
     public IReadOnlyList<string> Steps { get; }
     public int? Rating { get; }
 
-    public Recipe(
+    protected Recipe(
         string id,
         string displayName,
         string cuisine = "General",
@@ -40,6 +40,7 @@ public class Recipe : IRecipe
         Rating = rating;
     }
 
+    public abstract string Describe();
 
     public Recipe Scale(int targetServings)
     {
@@ -48,18 +49,11 @@ public class Recipe : IRecipe
 
         decimal factor = (decimal)targetServings / Servings;
         var scaledIngredients = Ingredients
-            .Select(i => new IngredientLine(i.Name, i.Quantity * factor, i.Unit))
-            .ToList();
+        .Select(i => new IngredientLine(i.Name, i.Quantity * factor, i.Unit))
+        .ToList();
 
-        return new Recipe(
-            Id,
-            DisplayName,
-            Cuisine,
-            TotalTimeMinutes,
-            targetServings,
-            scaledIngredients,
-            Steps,
-            Rating);
+        return CreateScaled(targetServings, scaledIngredients);
     }
 
+    protected abstract Recipe CreateScaled(int targetServings, IReadOnlyList<IngredientLine> scaledIngredients);
 }

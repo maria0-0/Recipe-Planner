@@ -10,5 +10,8 @@ public enum Unit
     Piece,
     Teaspoon,
     Tablespoon,
-    Cup
+    Cup,
+    Kilogram,
+    Liter,
+    Pinch
 }

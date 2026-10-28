@@ -12,6 +12,20 @@ public class MealPlan
         _meals.Add(recipe);
     }
 
+    public bool RemoveRecipe(string recipeId)
+    {
+        var recipe = _meals.FirstOrDefault(m => m.Id == recipeId);
+        return recipe is not null && _meals.Remove(recipe);
+    }
+
+    public void Clear() => _meals.Clear();
+
+    public decimal CalculateEstimatedCost() =>
+        _meals.Sum(m => m.EstimatedCost ?? 0m);
+
+    public int TotalCalories() =>
+        _meals.Sum(m => m.Nutrition?.Calories ?? 0);
+
     public IReadOnlyList<IngredientLine> GenerateShoppingList()
     {
         return _meals

@@ -13,4 +13,13 @@ public interface IRecipe : IItem
     IReadOnlyList<IngredientLine> Ingredients { get; }
     IReadOnlyList<string> Steps { get; }
     int? Rating { get; }
+    DifficultyLevel Difficulty { get; }
+    int PrepTimeMinutes { get; }
+    int CookTimeMinutes { get; }
+    NutritionInfo? Nutrition { get; }
+    Diet DietTags { get; }
+    decimal? EstimatedCost { get; }
+    bool IsFavorite { get; set; }
+    string? PhotoPath { get; set; }
+    string? SourceUrl { get; set; }
 }

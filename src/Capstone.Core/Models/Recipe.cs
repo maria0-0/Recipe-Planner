@@ -13,6 +13,15 @@ public abstract class Recipe : IRecipe
     public IReadOnlyList<IngredientLine> Ingredients { get; }
     public IReadOnlyList<string> Steps { get; }
     public int? Rating { get; }
+    public DifficultyLevel Difficulty { get; }
+    public int PrepTimeMinutes { get; }
+    public int CookTimeMinutes { get; }
+    public NutritionInfo? Nutrition { get; }
+    public Diet DietTags { get; }
+    public decimal? EstimatedCost { get; }
+    public bool IsFavorite { get; set; }
+    public string? PhotoPath { get; set; }
+    public string? SourceUrl { get; set; }
 
     protected Recipe(
         string id,
@@ -22,7 +31,16 @@ public abstract class Recipe : IRecipe
         int servings = 4,
         IReadOnlyList<IngredientLine>? ingredients = null,
         IReadOnlyList<string>? steps = null,
-        int? rating = null)
+        int? rating = null,
+        DifficultyLevel difficulty = DifficultyLevel.Medium,
+        int prepTimeMinutes = 10,
+        int cookTimeMinutes = 20,
+        NutritionInfo? nutrition = null,
+        Diet dietTags = Diet.None,
+        decimal? estimatedCost = null,
+        bool isFavorite = false,
+        string? photoPath = null,
+        string? sourceUrl = null)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("Recipe Id cannot be empty or null.", nameof(id));
@@ -38,6 +56,15 @@ public abstract class Recipe : IRecipe
         Ingredients = ingredients ?? [];
         Steps = steps ?? [];
         Rating = rating;
+        Difficulty = difficulty;
+        PrepTimeMinutes = prepTimeMinutes;
+        CookTimeMinutes = cookTimeMinutes;
+        Nutrition = nutrition;
+        DietTags = dietTags;
+        EstimatedCost = estimatedCost;
+        IsFavorite = isFavorite;
+        PhotoPath = photoPath;
+        SourceUrl = sourceUrl;
     }
 
     public abstract string Describe();
@@ -49,8 +76,8 @@ public abstract class Recipe : IRecipe
 
         decimal factor = (decimal)targetServings / Servings;
         var scaledIngredients = Ingredients
-        .Select(i => new IngredientLine(i.Name, i.Quantity * factor, i.Unit))
-        .ToList();
+            .Select(i => new IngredientLine(i.Name, i.Quantity * factor, i.Unit, i.PricePerUnit, i.CaloriesPer100g))
+            .ToList();
 
         return CreateScaled(targetServings, scaledIngredients);
     }

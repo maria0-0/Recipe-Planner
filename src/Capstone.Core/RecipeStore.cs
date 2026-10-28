@@ -1,15 +1,27 @@
+using System.Collections;
 using SharpQuest.Contracts;
 
 namespace Capstone.Core;
 
 /// <summary>
-/// In-memory storage for recipes and items.
+/// In-memory storage and collection for recipes and items (The Recipe Book).
 /// </summary>
-public class RecipeStore : IItemStore
+public class RecipeStore : IItemStore, IEnumerable<IItem>
 {
     private readonly List<IItem> _items = [];
 
     public int Count => _items.Count;
+
+    /// <summary>
+    /// Indexer by position in the order items were added.
+    /// Throws ArgumentOutOfRangeException if index is outside the collection.
+    /// </summary>
+    public IItem this[int index] => _items[index];
+
+    /// <summary>
+    /// Indexer by recipe ID. Returns the item or null if not found.
+    /// </summary>
+    public IItem? this[string id] => FindById(id);
 
     public void Add(IItem item)
     {
@@ -45,4 +57,32 @@ public class RecipeStore : IItemStore
         return true;
     }
 
+    /// <summary>
+    /// Iterates through the store in the order items were added.
+    /// Written with yield return as an iterator.
+    /// </summary>
+    public IEnumerator<IItem> GetEnumerator()
+    {
+        foreach (var item in _items)
+        {
+            yield return item;
+        }
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    /// <summary>
+    /// Returns recipes matching the given text in DisplayName.
+    /// Written with yield return so it is deferred (lazy) until enumerated.
+    /// </summary>
+    public IEnumerable<IItem> Matching(string text)
+    {
+        foreach (var item in _items)
+        {
+            if (string.IsNullOrEmpty(text) || item.DisplayName.Contains(text, StringComparison.OrdinalIgnoreCase))
+            {
+                yield return item;
+            }
+        }
+    }
 }

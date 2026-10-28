@@ -12,7 +12,16 @@ public record RecipeDto(
     int Servings = 4,
     List<IngredientLine>? Ingredients = null,
     List<string>? Steps = null,
-    int? Rating = null);
+    int? Rating = null,
+    DifficultyLevel Difficulty = DifficultyLevel.Medium,
+    int PrepTimeMinutes = 10,
+    int CookTimeMinutes = 20,
+    NutritionInfo? Nutrition = null,
+    Diet DietTags = Diet.None,
+    decimal? EstimatedCost = null,
+    bool IsFavorite = false,
+    string? PhotoPath = null,
+    string? SourceUrl = null);
 
 /// <summary>
 /// Converts Recipe items to JSON and back safely.
@@ -38,7 +47,16 @@ public class RecipeMapper : IItemMapper
                 r.Servings,
                 r.Ingredients.ToList(),
                 r.Steps.ToList(),
-                r.Rating),
+                r.Rating,
+                r.Difficulty,
+                r.PrepTimeMinutes,
+                r.CookTimeMinutes,
+                r.Nutrition,
+                r.DietTags,
+                r.EstimatedCost,
+                r.IsFavorite,
+                r.PhotoPath,
+                r.SourceUrl),
 
             _ => new RecipeDto(item.Id, item.DisplayName)
         };
@@ -61,7 +79,7 @@ public class RecipeMapper : IItemMapper
             if (string.IsNullOrWhiteSpace(dto.Id) || string.IsNullOrWhiteSpace(dto.DisplayName))
                 return null;
 
-        return new StovetopRecipe(
+            return new StovetopRecipe(
                 dto.Id,
                 dto.DisplayName,
                 heatLevel: "Medium",
@@ -70,7 +88,16 @@ public class RecipeMapper : IItemMapper
                 servings: dto.Servings,
                 ingredients: dto.Ingredients,
                 steps: dto.Steps,
-                rating: dto.Rating);
+                rating: dto.Rating,
+                difficulty: dto.Difficulty,
+                prepTimeMinutes: dto.PrepTimeMinutes,
+                cookTimeMinutes: dto.CookTimeMinutes,
+                nutrition: dto.Nutrition,
+                dietTags: dto.DietTags,
+                estimatedCost: dto.EstimatedCost,
+                isFavorite: dto.IsFavorite,
+                photoPath: dto.PhotoPath,
+                sourceUrl: dto.SourceUrl);
 
         }
         catch (Exception)

@@ -284,6 +284,100 @@ public class RecipeTests
         recent.Push("Risotto");
         Assert.Equal(["Risotto", "Carbonara", "Lasagna"], recent.Items);
     }
+
+    [Fact]
+    public void RecipeStore_ItemAdded_event_notifies_multiple_subscribers()
+    {
+        var store = new RecipeStore();
+        int count = 0;
+        string? lastAdded = null;
+
+        store.ItemAdded += item => count++;
+        store.ItemAdded += item => lastAdded = item.DisplayName;
+
+        store.Add(new StovetopRecipe("r-1", "Risotto"));
+
+        Assert.Equal(1, count);
+        Assert.Equal("Risotto", lastAdded);
+    }
+
+    [Fact]
+    public void RecipeStore_ItemAdded_does_not_fire_when_add_fails()
+    {
+        var store = new RecipeStore();
+        store.Add(new StovetopRecipe("r-1", "Risotto"));
+
+        int eventCount = 0;
+        store.ItemAdded += _ => eventCount++;
+
+        // Duplicate ID throws ArgumentException
+        Assert.Throws<ArgumentException>(() => store.Add(new StovetopRecipe("r-1", "Duplicate Risotto")));
+        Assert.Equal(0, eventCount);
+    }
+
+    [Fact]
+    public void AutoShoppingList_updates_itself_automatically_when_plan_changes()
+    {
+        var plan = new MealPlan();
+        var autoList = new AutoShoppingList(plan);
+
+        Assert.Empty(autoList.Items);
+
+        // Adding a recipe to the plan updates the shopping list automatically without manual calls
+        plan.AddRecipe(new StovetopRecipe("r-1", "Lunch", ingredients: [new("Pasta", 200m, Unit.Gram)]));
+        Assert.Single(autoList.Items);
+        Assert.Equal(200m, autoList.Items[0].Quantity);
+
+        // Adding another recipe with the same ingredient accumulates the quantity automatically
+        plan.AddRecipe(new StovetopRecipe("r-2", "Dinner", ingredients: [new("Pasta", 300m, Unit.Gram)]));
+        Assert.Single(autoList.Items);
+        Assert.Equal(500m, autoList.Items[0].Quantity);
+
+        // Removing a recipe automatically decreases the shopping list quantity
+        plan.RemoveRecipe("r-1");
+        Assert.Single(autoList.Items);
+        Assert.Equal(300m, autoList.Items[0].Quantity);
+    }
+
+    [Fact]
+    public void RecipeStore_fires_FavoriteToggled_and_CookingLogged_events()
+    {
+        var store = new RecipeStore();
+        var recipe = new StovetopRecipe("r-1", "Pancakes");
+
+        bool favoriteFired = false;
+        bool cookingFired = false;
+
+        store.FavoriteToggled += r => favoriteFired = true;
+        store.CookingLogged += r => cookingFired = true;
+
+        store.ToggleFavorite(recipe);
+        store.LogCooking(recipe);
+
+        Assert.True(favoriteFired);
+        Assert.True(recipe.IsFavorite);
+        Assert.True(cookingFired);
+    }
+
+    [Fact]
+    public void MealPlan_PlanChangedDetailed_fires_with_rich_payload()
+    {
+        var plan = new MealPlan();
+        PlanChangeArgs? lastChange = null;
+
+        plan.PlanChangedDetailed += change => lastChange = change;
+
+        var recipe = new StovetopRecipe("r-1", "Carbonara");
+        plan.AddRecipe(recipe);
+
+        Assert.NotNull(lastChange);
+        Assert.Equal("ADDED", lastChange.Action);
+        Assert.Equal("Carbonara", lastChange.RecipeName);
+
+        plan.RemoveRecipe("r-1");
+        Assert.Equal("REMOVED", lastChange.Action);
+        Assert.Equal("Carbonara", lastChange.RecipeName);
+    }
 }
 
 

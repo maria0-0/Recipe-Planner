@@ -1,26 +1,26 @@
 using System.Collections;
 using SharpQuest.Contracts;
+using Capstone.Core.Models;
 
 namespace Capstone.Core;
 
-/// <summary>
-/// In-memory storage and collection for recipes and items (The Recipe Book).
-/// </summary>
+//In-memory storage and collection for recipes and items (The Recipe Book).
+
 public class RecipeStore : IItemStore, IEnumerable<IItem>
 {
     private readonly List<IItem> _items = [];
 
     public int Count => _items.Count;
 
-    /// <summary>
-    /// Indexer by position in the order items were added.
-    /// Throws ArgumentOutOfRangeException if index is outside the collection.
-    /// </summary>
+    public event Action<IItem>? ItemAdded;
+
+    public event Action<Recipe>? FavoriteToggled;
+
+    public event Action<Recipe>? CookingLogged;
+  
     public IItem this[int index] => _items[index];
 
-    /// <summary>
-    /// Indexer by recipe ID. Returns the item or null if not found.
-    /// </summary>
+   
     public IItem? this[string id] => FindById(id);
 
     public void Add(IItem item)
@@ -31,6 +31,8 @@ public class RecipeStore : IItemStore, IEnumerable<IItem>
             throw new ArgumentException($"An item with Id '{item.Id}' already exists.", nameof(item));
 
         _items.Add(item);
+
+        ItemAdded?.Invoke(item);
     }
 
     public IItem? FindById(string id)
@@ -42,7 +44,6 @@ public class RecipeStore : IItemStore, IEnumerable<IItem>
 
     public IReadOnlyList<IItem> All()
     {
-        // Returns a new copy (snapshot) so outside modifications don't affect this list
         return _items.ToList();
     }
 
@@ -57,10 +58,7 @@ public class RecipeStore : IItemStore, IEnumerable<IItem>
         return true;
     }
 
-    /// <summary>
-    /// Iterates through the store in the order items were added.
-    /// Written with yield return as an iterator.
-    /// </summary>
+
     public IEnumerator<IItem> GetEnumerator()
     {
         foreach (var item in _items)
@@ -71,10 +69,7 @@ public class RecipeStore : IItemStore, IEnumerable<IItem>
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    /// <summary>
-    /// Returns recipes matching the given text in DisplayName.
-    /// Written with yield return so it is deferred (lazy) until enumerated.
-    /// </summary>
+  
     public IEnumerable<IItem> Matching(string text)
     {
         foreach (var item in _items)
@@ -84,5 +79,18 @@ public class RecipeStore : IItemStore, IEnumerable<IItem>
                 yield return item;
             }
         }
+    }
+
+    public void ToggleFavorite(Recipe recipe)
+    {
+        ArgumentNullException.ThrowIfNull(recipe);
+        recipe.IsFavorite = !recipe.IsFavorite;
+        FavoriteToggled?.Invoke(recipe);
+    }
+
+    public void LogCooking(Recipe recipe)
+    {
+        ArgumentNullException.ThrowIfNull(recipe);
+        CookingLogged?.Invoke(recipe);
     }
 }

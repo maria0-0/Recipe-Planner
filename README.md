@@ -14,6 +14,11 @@ You build a recipe book that plans: recipes with their ingredients, a week of me
     Parent and children: a Category has many recipes
     What you'll look at: the recipe book, searchable, and the week's plan
 
+### Session 7 — LINQ
+- **Classes added/changed:** `RecipeQueries` (extension methods), `Lab07Wiring`.
+- **What they do:** Answer queries: A-Z sorting, pagination for recipe browsing, longest names, dashboard summary statistics, vegetarian under 30 minutes, and fridge matching.
+- **Where you'll see it working:** In `Program.cs` console demo, in `RecipeTests.cs`, and in the UI recipe list pagination.
+
 
 ---
 

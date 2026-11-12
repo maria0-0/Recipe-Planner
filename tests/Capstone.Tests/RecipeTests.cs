@@ -378,6 +378,160 @@ public class RecipeTests
         Assert.Equal("REMOVED", lastChange.Action);
         Assert.Equal("Carbonara", lastChange.RecipeName);
     }
+
+    [Fact]
+    public void RecipeQueries_Page_returns_correct_slice_in_name_order()
+    {
+        var recipes = new List<Recipe>
+        {
+            new StovetopRecipe("r-3", "Carbonara"),
+            new BakedRecipe("r-1", "Apple Pie"),
+            new NoCookRecipe("r-2", "Banana Smoothie"),
+            new StovetopRecipe("r-4", "Donut")
+        };
+
+        // Name order: Apple Pie (0), Banana Smoothie (1), Carbonara (2), Donut (3)
+        var page = recipes.Page(skip: 1, take: 2);
+
+        Assert.Equal(2, page.Count);
+        Assert.Equal("Banana Smoothie", page[0].DisplayName);
+        Assert.Equal("Carbonara", page[1].DisplayName);
+    }
+
+    [Fact]
+    public void RecipeQueries_FridgeMatch_finds_recipes_matching_fridge_ingredients()
+    {
+        var r1 = new StovetopRecipe("r-1", "Omelette", ingredients: [
+            new("Eggs", 2, Unit.Piece),
+            new("Cheese", 50, Unit.Gram)
+        ]);
+
+        var r2 = new StovetopRecipe("r-2", "Complex Stew", ingredients: [
+            new("Beef", 500, Unit.Gram),
+            new("Carrot", 2, Unit.Piece),
+            new("Potato", 3, Unit.Piece),
+            new("Wine", 200, Unit.Milliliter)
+        ]);
+
+        var recipes = new List<Recipe> { r1, r2 };
+
+        // I have eggs, cheese, and milk in my fridge
+        var fridge = new List<string> { "Eggs", "Cheese", "Milk" };
+
+        var matches = recipes.FridgeMatch(fridge, maxMissing: 0).ToList();
+
+        Assert.Single(matches);
+        Assert.Equal("Omelette", matches[0].DisplayName);
+
+        // Test MissingIngredients
+        Assert.Empty(r1.MissingIngredients(fridge));
+
+        var stewMissing = r2.MissingIngredients(fridge);
+        Assert.Equal(4, stewMissing.Count);
+        Assert.Contains("Beef", stewMissing);
+        Assert.Contains("Carrot", stewMissing);
+    }
+
+    [Fact]
+    public void RecipeQueries_Filter_multi_criteria_search()
+    {
+        var chickenSalad = new NoCookRecipe(
+            "r-1",
+            "Chicken Salad",
+            cuisine: "American",
+            totalTimeMinutes: 15,
+            dietTags: Diet.GlutenFree,
+            ingredients: [new("Chicken Breast", 200, Unit.Gram), new("Lettuce", 100, Unit.Gram)]);
+
+        var chickenCurry = new StovetopRecipe(
+            "r-2",
+            "Chicken Curry",
+            cuisine: "Indian",
+            totalTimeMinutes: 45,
+            dietTags: Diet.GlutenFree | Diet.DairyFree,
+            ingredients: [new("Chicken Breast", 400, Unit.Gram), new("Curry Paste", 50, Unit.Gram)]);
+
+        var veggiePasta = new StovetopRecipe(
+            "r-3",
+            "Veggie Pasta",
+            cuisine: "Italian",
+            totalTimeMinutes: 20,
+            dietTags: Diet.Vegetarian,
+            ingredients: [new("Pasta", 200, Unit.Gram), new("Tomato Sauce", 100, Unit.Milliliter)]);
+
+        var recipes = new List<Recipe> { chickenSalad, chickenCurry, veggiePasta };
+
+        // 1. Filter by ingredient only ("Chicken") - any time, any diet
+        var chickenRecipes = recipes.Filter(ingredient: "Chicken").ToList();
+        Assert.Equal(2, chickenRecipes.Count);
+
+        // 2. Filter by diet only (Vegetarian) - any time
+        var vegRecipes = recipes.Filter(diet: Diet.Vegetarian).ToList();
+        Assert.Single(vegRecipes);
+        Assert.Equal("Veggie Pasta", vegRecipes[0].DisplayName);
+
+        // 3. Multi-criteria: Contains chicken + max 20 minutes
+        var quickChicken = recipes.Filter(ingredient: "Chicken", maxMinutes: 20).ToList();
+        Assert.Single(quickChicken);
+        Assert.Equal("Chicken Salad", quickChicken[0].DisplayName);
+
+        // 4. Multi-criteria: Indian cuisine + DairyFree
+        var indianDairyFree = recipes.Filter(cuisine: "Indian", diet: Diet.DairyFree).ToList();
+        Assert.Single(indianDairyFree);
+        Assert.Equal("Chicken Curry", indianDairyFree[0].DisplayName);
+    }
+
+    [Fact]
+    public void RecipeQueries_MostUsedIngredients_aggregates_across_all_recipes()
+    {
+        var r1 = new StovetopRecipe("r-1", "Dish 1", ingredients: [
+            new("Salt", 1, Unit.Teaspoon),
+            new("Pepper", 1, Unit.Teaspoon),
+            new("Olive Oil", 15, Unit.Milliliter)
+        ]);
+
+        var r2 = new StovetopRecipe("r-2", "Dish 2", ingredients: [
+            new("Olive Oil", 30, Unit.Milliliter),
+            new("Garlic", 2, Unit.Piece),
+            new("Salt", 2, Unit.Teaspoon)
+        ]);
+
+        var recipes = new List<Recipe> { r1, r2 };
+
+        var top = recipes.MostUsedIngredients(top: 2);
+
+        Assert.Equal(2, top.Count);
+        // Salt and Olive Oil are both used in 2 recipes
+        Assert.Contains(top, t => t.Ingredient == "salt" && t.Count == 2);
+        Assert.Contains(top, t => t.Ingredient == "olive oil" && t.Count == 2);
+    }
+
+    [Fact]
+    public void RecipeQueries_Domain_vocabulary_and_cuisine_grouping()
+    {
+        var emptyList = new List<IItem>();
+        Assert.True(emptyList.IsEmpty());
+
+        var r1 = new StovetopRecipe("r-1", "Pasta Carbonara", cuisine: "Italian", totalTimeMinutes: 20);
+        var r2 = new BakedRecipe("r-2", "Pizza Margherita", cuisine: "Italian", totalTimeMinutes: 40);
+        var r3 = new StovetopRecipe("r-3", "Tacos", cuisine: "Mexican", totalTimeMinutes: 15);
+
+        var recipes = new List<Recipe> { r1, r2, r3 };
+
+        // Test IsEmpty and OneLine
+        Assert.False(recipes.IsEmpty());
+        Assert.Equal("Pasta Carbonara, Pizza Margherita, Tacos", recipes.OneLine());
+
+        // Test GroupBy cuisine averages
+        var cuisineStats = recipes.AverageTimePerCuisine();
+        Assert.Equal(2, cuisineStats.Count);
+
+        var italian = Assert.Single(cuisineStats, c => c.Cuisine == "Italian");
+        Assert.Equal(30.0, italian.AverageMinutes); // (20 + 40) / 2 = 30
+
+        var mexican = Assert.Single(cuisineStats, c => c.Cuisine == "Mexican");
+        Assert.Equal(15.0, mexican.AverageMinutes);
+    }
 }
 
 

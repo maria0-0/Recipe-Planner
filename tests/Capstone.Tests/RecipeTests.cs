@@ -1,5 +1,6 @@
 using Capstone.Core;
 using Capstone.Core.Models;
+using Capstone.Core.Storage;
 using SharpQuest.Contracts;
 
 namespace Capstone.Tests;
@@ -531,6 +532,194 @@ public class RecipeTests
 
         var mexican = Assert.Single(cuisineStats, c => c.Cuisine == "Mexican");
         Assert.Equal(15.0, mexican.AverageMinutes);
+    }
+
+    [Fact]
+    public async Task RecipeFile_round_trip_preserves_all_recipe_kinds_and_properties()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"recipes-test-{Guid.NewGuid():N}.json");
+        try
+        {
+            var store = new RecipeStore();
+            var baked = new BakedRecipe(
+                "b-1", "Apple Pie",
+                ovenTemperature: 190,
+                cuisine: "American",
+                totalTimeMinutes: 50,
+                ingredients: [new("Apples", 4, Unit.Piece), new("Flour", 300, Unit.Gram)],
+                steps: ["Mix", "Bake"]);
+
+            var stovetop = new StovetopRecipe(
+                "s-1", "Stir Fry",
+                heatLevel: "High",
+                cuisine: "Asian",
+                totalTimeMinutes: 20,
+                dietTags: Diet.Vegetarian);
+
+            var nocook = new NoCookRecipe(
+                "n-1", "Gazpacho",
+                requiresChilling: true,
+                cuisine: "Spanish",
+                totalTimeMinutes: 15,
+                dietTags: Diet.Vegan);
+
+            store.Add(baked);
+            store.Add(stovetop);
+            store.Add(nocook);
+
+            await RecipeFile.SaveAsync(store, tempFile);
+
+            var loaded = await RecipeFile.LoadAsync(tempFile);
+
+            Assert.Equal(3, loaded.Count);
+
+            var loadedBaked = Assert.IsType<BakedRecipe>(loaded.FindById("b-1"));
+            Assert.Equal("Apple Pie", loadedBaked.DisplayName);
+            Assert.Equal(190, loadedBaked.OvenTemperature);
+            Assert.Equal(2, loadedBaked.Ingredients.Count);
+
+            var loadedStovetop = Assert.IsType<StovetopRecipe>(loaded.FindById("s-1"));
+            Assert.Equal("High", loadedStovetop.HeatLevel);
+            Assert.Equal(Diet.Vegetarian, loadedStovetop.DietTags);
+
+            var loadedNoCook = Assert.IsType<NoCookRecipe>(loaded.FindById("n-1"));
+            Assert.True(loadedNoCook.RequiresChilling);
+            Assert.Equal(Diet.Vegan, loadedNoCook.DietTags);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task RecipeFile_missing_file_returns_empty_store()
+    {
+        var missingPath = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.json");
+        var store = await RecipeFile.LoadAsync(missingPath);
+
+        Assert.NotNull(store);
+        Assert.Equal(0, store.Count);
+        Assert.False(File.Exists(missingPath));
+    }
+
+    [Fact]
+    public async Task RecipeFile_corrupted_file_throws_InvalidDataException()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"corrupt-{Guid.NewGuid():N}.json");
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, "{ this is not valid json");
+            await Assert.ThrowsAsync<InvalidDataException>(() => RecipeFile.LoadAsync(tempFile));
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task RecipeFile_MealPlan_round_trip_persists_meals_and_shopping_list()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"plan-{Guid.NewGuid():N}.json");
+        try
+        {
+            var plan = new MealPlan();
+            plan.AddRecipe(new StovetopRecipe("r-1", "Omelette", ingredients: [new("Eggs", 3, Unit.Piece)]));
+            plan.AddRecipe(new BakedRecipe("r-2", "Bread", ingredients: [new("Flour", 500, Unit.Gram)]));
+
+            await RecipeFile.SaveMealPlanAsync(plan, tempFile);
+
+            var loadedPlan = await RecipeFile.LoadMealPlanAsync(tempFile);
+
+            Assert.Equal(2, loadedPlan.Meals.Count);
+            Assert.Equal(2, loadedPlan.GenerateShoppingList().Count);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task RecipeFile_Fridge_round_trip_saves_and_loads_ingredients()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"fridge-{Guid.NewGuid():N}.json");
+        try
+        {
+            var fridge = new List<string> { "Eggs", "Milk", "Cheese", "Butter" };
+
+            await RecipeFile.SaveFridgeAsync(fridge, tempFile);
+
+            var loadedFridge = await RecipeFile.LoadFridgeAsync(tempFile);
+
+            Assert.Equal(4, loadedFridge.Count);
+            Assert.Contains("Milk", loadedFridge);
+            Assert.Contains("Cheese", loadedFridge);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task RecipeFile_CookingHistory_and_Favorites_survive_persistence()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"history-{Guid.NewGuid():N}.json");
+        try
+        {
+            var store = new RecipeStore();
+            var fav = new StovetopRecipe("r-1", "Pasta", isFavorite: true);
+            var regular = new BakedRecipe("r-2", "Cake", isFavorite: false);
+
+            store.Add(fav);
+            store.Add(regular);
+
+            Assert.Single(store.Favorites);
+            Assert.Equal("Pasta", store.Favorites[0].DisplayName);
+
+            store.LogCooking(fav, new DateTime(2026, 11, 19, 12, 0, 0));
+            Assert.Single(store.CookingHistory);
+
+            await RecipeFile.SaveCookingHistoryAsync(store.CookingHistory, tempFile);
+
+            var loadedHistory = await RecipeFile.LoadCookingHistoryAsync(tempFile);
+            Assert.Single(loadedHistory);
+            Assert.Equal("Pasta", loadedHistory[0].RecipeName);
+            Assert.Equal("r-1", loadedHistory[0].RecipeId);
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task RecipeFile_Favorites_dedicated_round_trip()
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"favs-{Guid.NewGuid():N}.json");
+        try
+        {
+            var favList = new List<Recipe>
+            {
+                new StovetopRecipe("r-1", "Carbonara", isFavorite: true),
+                new BakedRecipe("r-2", "Apple Pie", isFavorite: true)
+            };
+
+            await RecipeFile.SaveFavoritesAsync(favList, tempFile);
+
+            var loadedFavs = await RecipeFile.LoadFavoritesAsync(tempFile);
+
+            Assert.Equal(2, loadedFavs.Count);
+            Assert.All(loadedFavs, r => Assert.True(r.IsFavorite));
+            Assert.Contains(loadedFavs, r => r.DisplayName == "Carbonara");
+            Assert.Contains(loadedFavs, r => r.DisplayName == "Apple Pie");
+        }
+        finally
+        {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
     }
 }
 

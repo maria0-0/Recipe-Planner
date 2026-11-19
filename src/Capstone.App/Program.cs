@@ -1,6 +1,45 @@
 using Capstone.Core;
 using Capstone.Core.Models;
+using Capstone.Core.Storage;
 using SharpQuest.Contracts;
+
+var savePath = Path.Combine(Directory.GetCurrentDirectory(), "saved-recipes.json");
+
+if (args.Contains("--save"))
+{
+    var sampleStore = new RecipeStore();
+    sampleStore.Add(new StovetopRecipe("r-1", "Spaghetti Carbonara", cuisine: "Italian", ingredients: [new("Pasta", 200, Unit.Gram), new("Eggs", 2, Unit.Piece), new("Bacon", 100, Unit.Gram)]));
+    sampleStore.Add(new BakedRecipe("r-2", "Apple Crumble", ovenTemperature: 180, cuisine: "British", dietTags: Diet.Vegetarian, ingredients: [new("Apples", 3, Unit.Piece), new("Flour", 200, Unit.Gram), new("Sugar", 100, Unit.Gram)]));
+    sampleStore.Add(new NoCookRecipe("r-3", "Greek Salad", requiresChilling: true, cuisine: "Greek", dietTags: Diet.Vegetarian | Diet.GlutenFree, ingredients: [new("Tomatoes", 2, Unit.Piece), new("Cucumbers", 1, Unit.Piece), new("Feta Cheese", 150, Unit.Gram)]));
+    sampleStore.Add(new StovetopRecipe("r-4", "Banana Pancakes", cuisine: "American", dietTags: Diet.Vegetarian, ingredients: [new("Banana", 1, Unit.Piece), new("Eggs", 2, Unit.Piece)]));
+
+    await RecipeFile.SaveAsync(sampleStore, savePath);
+    Console.WriteLine($"Saved {sampleStore.Count} entries to {Path.GetFileName(savePath)}.");
+    var loadedBack = await RecipeFile.LoadAsync(savePath);
+    Console.WriteLine($"Loaded {loadedBack.Count} entries back:");
+    foreach (var item in loadedBack.All())
+    {
+        if (item is Recipe r)
+        {
+            Console.WriteLine($"  #{r.Id} {r.DisplayName} · {r.GetType().Name} · {r.Cuisine} · {r.TotalTimeMinutes} mins");
+        }
+    }
+    return;
+}
+
+if (args.Contains("--load"))
+{
+    var loadedStore = await RecipeFile.LoadAsync(savePath);
+    Console.WriteLine($"Loaded {loadedStore.Count} entries back from {Path.GetFileName(savePath)}:");
+    foreach (var item in loadedStore.All())
+    {
+        if (item is Recipe r)
+        {
+            Console.WriteLine($"  #{r.Id} {r.DisplayName} · {r.GetType().Name} · {r.Cuisine} · {r.TotalTimeMinutes} mins");
+        }
+    }
+    return;
+}
 
 Console.WriteLine("=== Recipe Planner — Session 6 Events Demo ===\n");
 
@@ -71,8 +110,9 @@ plan.PlanChangedDetailed += change =>
     Console.WriteLine($"[Plan Audit] Action: {change.Action} | Recipe: '{change.RecipeName}' at {change.Timestamp:HH:mm:ss}");
 };
 
-plan.AddRecipe(new StovetopRecipe("r-1", "Spaghetti Carbonara"));
-plan.AddRecipe(new BakedRecipe("r-2", "Apple Crumble"));
+plan.AddRecipe((Recipe)book.FindById("r-1")!);
+plan.AddRecipe((Recipe)book.FindById("r-2")!);
+plan.AddRecipe((Recipe)book.FindById("r-3")!);
 plan.RemoveRecipe("r-1");
 
 // ======================================================================
@@ -161,3 +201,47 @@ foreach (var (cuisine, avgMinutes) in book.OfType<Recipe>().AverageTimePerCuisin
 {
     Console.WriteLine($"  • {cuisine}: {avgMinutes:F1} mins");
 }
+
+// ======================================================================
+// === SESSION 8 — PERSISTENCE & ASYNC DEMO ============================
+// ======================================================================
+Console.WriteLine("\n=== Session 8 — Persistence & Async Demo ===\n");
+var defaultSavePath = Path.Combine(Directory.GetCurrentDirectory(), "saved-recipes.json");
+
+Console.WriteLine($"Saving {book.Count} recipes asynchronously to '{Path.GetFileName(defaultSavePath)}'...");
+await RecipeFile.SaveAsync(book, defaultSavePath);
+Console.WriteLine("Saved successfully! Simulating application restart...\n");
+
+var reloadedBook = await RecipeFile.LoadAsync(defaultSavePath);
+Console.WriteLine($"Reloaded {reloadedBook.Count} recipes from disk:");
+foreach (var item in reloadedBook.All())
+{
+    if (item is Recipe recipe)
+    {
+        Console.WriteLine($"  ✓ [{recipe.GetType().Name}] {recipe.Describe()}");
+    }
+}
+
+var planSavePath = Path.Combine(Directory.GetCurrentDirectory(), "saved-plan.json");
+await RecipeFile.SaveMealPlanAsync(plan, planSavePath);
+var reloadedPlan = await RecipeFile.LoadMealPlanAsync(planSavePath);
+Console.WriteLine($"\nReloaded Meal Plan ({reloadedPlan.Meals.Count} meals planned):");
+foreach (var meal in reloadedPlan.Meals)
+{
+    Console.WriteLine($"  ✓ {meal.DisplayName} ({meal.TotalTimeMinutes} mins, {meal.Cuisine})");
+}
+var planShoppingList = reloadedPlan.GenerateShoppingList();
+Console.WriteLine($"  Shopping list for plan: {string.Join(", ", planShoppingList.Select(i => $"{i.Quantity} {i.Unit} {i.Name}".Trim()))}");
+
+var fridgeSavePath = Path.Combine(Directory.GetCurrentDirectory(), "saved-fridge.json");
+await RecipeFile.SaveFridgeAsync(myFridge, fridgeSavePath);
+var reloadedFridge = await RecipeFile.LoadFridgeAsync(fridgeSavePath);
+Console.WriteLine($"Reloaded Fridge: {string.Join(", ", reloadedFridge)}");
+
+try
+{
+    File.Delete(defaultSavePath);
+    File.Delete(planSavePath);
+    File.Delete(fridgeSavePath);
+}
+catch {  }

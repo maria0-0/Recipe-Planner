@@ -81,6 +81,12 @@ public class RecipeStore : IItemStore, IEnumerable<IItem>
         }
     }
 
+    private readonly List<CookingHistoryEntry> _cookingHistory = [];
+
+    public IReadOnlyList<CookingHistoryEntry> CookingHistory => _cookingHistory;
+
+    public IReadOnlyList<Recipe> Favorites => _items.OfType<Recipe>().Where(r => r.IsFavorite).ToList();
+
     public void ToggleFavorite(Recipe recipe)
     {
         ArgumentNullException.ThrowIfNull(recipe);
@@ -88,9 +94,10 @@ public class RecipeStore : IItemStore, IEnumerable<IItem>
         FavoriteToggled?.Invoke(recipe);
     }
 
-    public void LogCooking(Recipe recipe)
+    public void LogCooking(Recipe recipe, DateTime? timestamp = null)
     {
         ArgumentNullException.ThrowIfNull(recipe);
+        _cookingHistory.Add(new CookingHistoryEntry(recipe.Id, recipe.DisplayName, timestamp ?? DateTime.Now));
         CookingLogged?.Invoke(recipe);
     }
 }

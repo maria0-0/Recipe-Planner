@@ -19,6 +19,11 @@ You build a recipe book that plans: recipes with their ingredients, a week of me
 - **What they do:** Answer queries: A-Z sorting, pagination for recipe browsing, longest names, dashboard summary statistics, vegetarian under 30 minutes, and fridge matching.
 - **Where you'll see it working:** In `Program.cs` console demo, in `RecipeTests.cs`, and in the UI recipe list pagination.
 
+### Session 8 — Persistence & async
+- **Classes added/changed:** `RecipeFile` (storage), `RecipeDto` / `RecipeMapper`, `CookingHistoryEntry`, `RecipeStore`, `Lab08Wiring`.
+- **What they do:** Asynchronous save and load to/from JSON for recipes (preserving every subtype `BakedRecipe`, `StovetopRecipe`, `NoCookRecipe` and ingredient lines), fridge contents, meal plans, and cooking history across restarts.
+- **Where you'll see it working:** In `Program.cs` save/load demo round-trip, in `RecipeTests.cs`, and in contract tests.
+
 
 ---
 
